@@ -28,3 +28,15 @@ model Project {
 
   @@index([createdAt(sort: Desc)])
 }
+
+model Feedback {
+  id        String   @id @default(cuid())
+  name      String
+  role      String?
+  content   String
+  imageUrl  String?  // Guardado no Vercel Blob
+  approved  Boolean  @default(false) // Para moderação do Admin
+  createdAt DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+}
