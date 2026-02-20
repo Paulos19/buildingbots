@@ -1,6 +1,8 @@
 import prisma from "@/lib/prisma"
-import { Button } from "@/components/ui/button"
-import { Plus, ArrowUpRight } from "lucide-react"
+import { ArrowUpRight } from "lucide-react"
+
+// Importamos o nosso Client Component que criamos no passo anterior
+import { CreateProjectDialog } from "./components/create-project-dialog"
 
 export default async function DashboardPage() {
   // Busca os projetos direto no banco (Server Component nativo e performático)
@@ -20,10 +22,8 @@ export default async function DashboardPage() {
           </p>
         </div>
         
-        {/* Este botão chamará nosso Client Component de Formulário depois */}
-        <Button className="gap-2">
-          <Plus size={20} strokeWidth={3} /> Novo Projeto
-        </Button>
+        {/* O Client Component substitui o antigo botão estático */}
+        <CreateProjectDialog />
       </header>
 
       {projects.length === 0 ? (

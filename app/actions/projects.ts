@@ -5,48 +5,53 @@ import { revalidatePath } from 'next/cache'
 import prisma from '@/lib/prisma'
 import { auth } from '@/auth'
 
-export async function createProject(formData: FormData) {
-  // 1. Blindagem de segurança
+// O State inicial agora mapeia erros e sucesso
+export type ProjectState = {
+  error?: string;
+  success?: boolean;
+}
+
+export async function createProject(prevState: ProjectState, formData: FormData): Promise<ProjectState> {
   const session = await auth()
+  
   if (!session || session.user?.email !== process.env.EMAIL_ADMIN) {
-    throw new Error("Não autorizado")
+    return { error: "Acesso negado." }
   }
 
-  // 2. Extração dos dados
   const title = formData.get('title') as string
   const description = formData.get('description') as string
   const demoUrl = formData.get('demoUrl') as string
   const sourceUrl = formData.get('sourceUrl') as string
   const imageFile = formData.get('image') as File
 
-  if (!title || !description || !imageFile) {
-    throw new Error("Campos obrigatórios faltando")
+  if (!title || !description || !imageFile || imageFile.size === 0) {
+    return { error: "Título, descrição e imagem são obrigatórios." }
   }
 
   try {
-    // 3. Upload para Vercel Blob
-    const blob = await put(`projects/${Date.now()}-${imageFile.name}`, imageFile, {
+    // 1. Upload brutalmente rápido pro Vercel Blob
+    const blob = await put(`projetos-bb/${Date.now()}-${imageFile.name.replace(/\s/g, '-')}`, imageFile, {
       access: 'public',
     })
 
-    // 4. Salvar no banco com Prisma v6
-    const project = await prisma.project.create({
+    // 2. Persistência no Prisma v6
+    await prisma.project.create({
       data: {
         title,
         description,
-        demoUrl,
-        sourceUrl,
+        demoUrl: demoUrl || null,
+        sourceUrl: sourceUrl || null,
         imageUrl: blob.url,
       }
     })
 
-    // 5. Revalidar a página da LP para mostrar o novo projeto instantaneamente
+    // 3. Revalidações: Garante que o usuário veja a mudança na hora
     revalidatePath('/')
     revalidatePath('/admin/dashboard')
 
-    return { success: true, project }
+    return { success: true }
   } catch (error) {
     console.error("Erro ao criar projeto:", error)
-    return { success: false, error: "Falha ao processar a requisição" }
+    return { error: "Falha ao enviar o projeto. Tente novamente." }
   }
 }
